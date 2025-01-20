@@ -2,10 +2,13 @@ from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from src.database.database import get_db
+from src.services.model_registry import ModelRegistry
+from fastapi.responses import HTMLResponse
 
 router = APIRouter()
-templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+templates = Jinja2Templates(directory="src/api/templates")
 supabase = get_db()
+model_registry = ModelRegistry()
 
 @router.get("/", include_in_schema=False)
 async def overview(request: Request):
@@ -33,4 +36,16 @@ async def overview(request: Request):
     return templates.TemplateResponse("overview.html", {
         "request": request,
         "stats": stats
-    }) 
+    })
+
+@router.get("/faceswap", response_class=HTMLResponse)
+async def faceswap_view(request: Request):
+    """Rendert die Faceswap UI"""
+    models = model_registry.list_models()
+    return templates.TemplateResponse(
+        "faceswap.html",
+        {
+            "request": request,
+            "models": models
+        }
+    ) 

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - AI Trainer{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Projekt Header -->
+    <div class="page-section">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-2xl font-bold mb-2">{{ project.name }}</h1>
+                <p class="text-gray-600">{{ project.description }}</p>
+                <div class="mt-2 text-sm text-gray-500">
+                    Owner: {{ project.owner }}
+                    <span class="mx-2">•</span>
+                    Status: {{ project.status }}
+                </div>
+            </div>
+            <button class="btn-primary" onclick="history.back()">Zurück</button>
+        </div>
+    </div>
+
+    <!-- Scenes erstellen -->
+    <div class="page-section">
+        <h2 class="section-title">Neue Scene</h2>
+        <form id="createSceneForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Name</label>
+                <input type="text" name="name" required class="form-input">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Beschreibung</label>
+                <textarea name="description" class="form-input"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Keywords (kommagetrennt)</label>
+                <input type="text" name="keywords" class="form-input" placeholder="z.B. training, indoor, running">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Target Attributes (JSON)</label>
+                <textarea name="target_attributes" class="form-input" placeholder='{"type": "training", "difficulty": "medium"}'></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Scene erstellen</button>
+        </form>
+    </div>
+
+    <!-- Scenes Liste -->
+    <div class="page-section">
+        <h2 class="section-title">Scenes</h2>
+        <div class="space-y-4">
+            {% if scenes %}
+                {% for scene in scenes %}
+                    <div class="project-card">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="project-title">{{ scene.name }}</h3>
+                                <p class="project-description">{{ scene.description }}</p>
+                                <div class="project-meta">
+                                    Keywords: {{ scene.keywords|join(", ") }}
+                                </div>
+                            </div>
+                            <div class="space-x-2">
+                                <button class="btn-primary" onclick="viewScene('{{ scene.id }}')">Details</button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-gray-500">Keine Scenes vorhanden</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('createSceneForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        keywords: formData.get('keywords').split(',').map(k => k.trim()),
+        target_attributes: JSON.parse(formData.get('target_attributes') || '{}')
+    };
+
+    try {
+        const response = await fetch('/api/projects/{{ project.id }}/scenes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Fehler beim Erstellen der Scene');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fehler beim Erstellen der Scene');
+    }
+});
+
+function viewScene(sceneId) {
+    window.location.href = `/projects/{{ project.id }}/scenes/${sceneId}`;
+}
+</script>
+{% endblock %}

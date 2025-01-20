@@ -1,31 +1,22 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="cursor-ai",
+    name="ai_trainer",
     version="0.1.0",
     description="Ein Framework für autonomes AI Training und Datenverarbeitung",
     author="Cursor AI Team",
     packages=find_packages(),
     install_requires=[
-        # Basis-Dependencies
-        "numpy>=1.19.0",
-        "opencv-python-headless>=4.5.0",
-        "pillow>=8.0.0",
-        "dlib>=19.22.0",
-        "tensorflow>=2.0.0",
-        "mtcnn>=0.1.0",
-        
-        # Supabase
-        "supabase",
-        "postgrest-py==0.4.0",
-        "python-jose[cryptography]>=3.3.0",
-        "requests==2.25.1",
-        
-        # API und Web
-        "fastapi>=0.68.0",
+        "fastapi>=0.68.1",
         "uvicorn>=0.15.0",
+        "python-dotenv>=0.19.0",
+        "supabase-py>=0.0.2",
+        "aiohttp>=3.8.1",
         "python-multipart>=0.0.5",
-        "aiofiles>=0.7.0",
+        "pillow>=8.3.2",
+        "opencv-python>=4.5.3.56",
+        "numpy>=1.21.2",
+        "pydantic>=1.8.2"
     ],
     extras_require={
         'dev': [

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-section">
+    <h2 class="section-title">Einstellungen</h2>
+    
+    <form id="settings-form" class="mt-6 space-y-6">
+        <!-- Debug Mode -->
+        <div class="flex items-center">
+            <input type="checkbox" id="debug_mode" name="debug_mode" 
+                   class="h-4 w-4 text-blue-600" 
+                   {% if settings.debug_mode %}checked{% endif %}>
+            <label for="debug_mode" class="ml-2">Debug-Modus aktivieren</label>
+        </div>
+        
+        <!-- Log Level -->
+        <div class="space-y-2">
+            <label for="log_level">Log Level</label>
+            <select id="log_level" name="log_level" class="form-select block w-full">
+                {% for level in log_levels %}
+                <option value="{{ level }}" 
+                        {% if level == settings.log_level %}selected{% endif %}>
+                    {{ level }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <!-- Supabase Settings -->
+        <div class="space-y-2">
+            <label for="supabase_url">Supabase URL</label>
+            <input type="text" id="supabase_url" name="supabase_url"
+                   value="{{ settings.supabase_url }}"
+                   class="form-input block w-full">
+        </div>
+        
+        <div class="space-y-2">
+            <label for="supabase_key">Supabase Key</label>
+            <input type="password" id="supabase_key" name="supabase_key"
+                   value="{{ settings.supabase_key }}"
+                   class="form-input block w-full">
+        </div>
+        
+        <button type="submit" class="btn-primary">
+            Einstellungen speichern
+        </button>
+    </form>
+</div>
+
+<script>
+document.getElementById('settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+        debug_mode: formData.get('debug_mode') === 'on',
+        log_level: formData.get('log_level'),
+        supabase_url: formData.get('supabase_url'),
+        supabase_key: formData.get('supabase_key')
+    };
+    
+    try {
+        const response = await fetch('/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            alert('Einstellungen gespeichert!');
+            window.location.reload();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fehler beim Speichern der Einstellungen');
+    }
+});
+</script>
+{% endblock %} 

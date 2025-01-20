@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-section">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="section-title">Datasets</h2>
+        <button id="new-dataset-btn" class="btn-primary">Neues Dataset</button>
+    </div>
+
+    <!-- Dataset Liste -->
+    <div id="datasets-list" class="grid gap-4">
+        {% for dataset in datasets %}
+        <div class="dataset-card bg-white p-6 rounded-lg shadow">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-lg font-semibold">{{ dataset.name }}</h3>
+                    <p class="text-gray-600">{{ dataset.description }}</p>
+                    <div class="mt-2">
+                        <span class="badge badge-info">{{ dataset.image_count }} Bilder</span>
+                        <span class="badge badge-success">{{ dataset.processed_count }} verarbeitet</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="btn-secondary upload-images" data-id="{{ dataset.id }}">Bilder hochladen</button>
+                    <button class="btn-secondary edit-dataset" data-id="{{ dataset.id }}">Bearbeiten</button>
+                    <button class="btn-danger delete-dataset" data-id="{{ dataset.id }}">Löschen</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Neues Dataset Modal -->
+    <div id="dataset-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="modal-title">Neues Dataset</h3>
+            <form id="dataset-form">
+                <div class="form-group">
+                    <label for="dataset-name">Name</label>
+                    <input type="text" id="dataset-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="dataset-description">Beschreibung</label>
+                    <textarea id="dataset-description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="project-id">Projekt</label>
+                    <select id="project-id" required>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}">{{ project.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" class="btn-secondary" onclick="closeModal()">Abbrechen</button>
+                    <button type="submit" class="btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bilder Upload Modal -->
+    <div id="upload-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="modal-title">Bilder hochladen</h3>
+            <form id="upload-form">
+                <div class="form-group">
+                    <label for="images">Bilder auswählen</label>
+                    <input type="file" id="images" multiple accept="image/*">
+                </div>
+                <div class="upload-preview mt-4"></div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button type="button" class="btn-secondary" onclick="closeUploadModal()">Abbrechen</button>
+                    <button type="submit" class="btn-primary">Hochladen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Modal Steuerung
+    const modal = document.getElementById('dataset-modal');
+    const uploadModal = document.getElementById('upload-modal');
+    const newDatasetBtn = document.getElementById('new-dataset-btn');
+    
+    newDatasetBtn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+    });
+
+    // Dataset erstellen
+    const datasetForm = document.getElementById('dataset-form');
+    datasetForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            name: document.getElementById('dataset-name').value,
+            description: document.getElementById('dataset-description').value,
+            project_id: document.getElementById('project-id').value
+        };
+        
+        try {
+            const response = await fetch('/api/datasets/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
+
+    // Bilder Upload
+    document.querySelectorAll('.upload-images').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const datasetId = e.target.dataset.id;
+            document.getElementById('upload-form').dataset.datasetId = datasetId;
+            uploadModal.classList.remove('hidden');
+        });
+    });
+});
+
+function closeModal() {
+    document.getElementById('dataset-modal').classList.add('hidden');
+}
+
+function closeUploadModal() {
+    document.getElementById('upload-modal').classList.add('hidden');
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% block scripts %}
+<script src="{{ url_for('static', path='js/face-detection.js') }}"></script>
+{% endblock %}
+
+<div class="page-section">
+    <h2 class="section-title">Face Swap Studio</h2>
+    
+    <div class="grid grid-cols-3 gap-6">
+        <!-- Linke Spalte: Quellbild und Gesichtserkennung -->
+        <div class="source-section">
+            <div class="panel">
+                <h3 class="panel-title">Quellbild</h3>
+                <div class="upload-box">
+                    <input type="file" id="source-image" accept="image/*" class="hidden">
+                    <label for="source-image" class="upload-label">
+                        <div class="upload-placeholder">
+                            <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <span>Quellbild hochladen</span>
+                        </div>
+                        <img id="source-preview" class="preview-image hidden">
+                    </label>
+                </div>
+                
+                <!-- Gesichtserkennung Einstellungen -->
+                <div class="face-detection-settings mt-4">
+                    <h4 class="settings-subtitle">Gesichtserkennung</h4>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label>Erkennungsgenauigkeit</label>
+                            <select id="detection-confidence" class="form-select">
+                                <option value="0.7">Hoch (70%)</option>
+                                <option value="0.5" selected>Mittel (50%)</option>
+                                <option value="0.3">Niedrig (30%)</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label>Gesichtsauswahl</label>
+                            <select id="face-selection" class="form-select">
+                                <option value="largest">Größtes Gesicht</option>
+                                <option value="all">Alle Gesichter</option>
+                                <option value="manual">Manuell auswählen</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mittlere Spalte: Zielbild und Anpassungen -->
+        <div class="target-section">
+            <div class="panel">
+                <h3 class="panel-title">Zielbild/Video</h3>
+                <div class="upload-box">
+                    <input type="file" id="target-image" accept="image/*,video/*" class="hidden">
+                    <label for="target-image" class="upload-label">
+                        <div class="upload-placeholder">
+                            <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <span>Zielbild/Video hochladen</span>
+                        </div>
+                        <img id="target-preview" class="preview-image hidden">
+                        <video id="target-video" class="preview-video hidden" controls></video>
+                    </label>
+                </div>
+
+                <!-- Gesichtsanpassungen -->
+                <div class="face-adjustment-settings mt-4">
+                    <h4 class="settings-subtitle">Gesichtsanpassungen</h4>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label>Skalierung</label>
+                            <input type="range" id="face-scale" min="0.5" max="1.5" step="0.1" value="1.0">
+                            <span class="value-display">1.0</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Position X</label>
+                            <input type="range" id="face-x" min="-50" max="50" value="0">
+                            <span class="value-display">0</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Position Y</label>
+                            <input type="range" id="face-y" min="-50" max="50" value="0">
+                            <span class="value-display">0</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Rotation</label>
+                            <input type="range" id="face-rotation" min="-30" max="30" value="0">
+                            <span class="value-display">0°</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rechte Spalte: Modell und Verarbeitungseinstellungen -->
+        <div class="settings-section">
+            <div class="panel">
+                <h3 class="panel-title">Verarbeitungseinstellungen</h3>
+                
+                <!-- Modellauswahl -->
+                <div class="model-settings">
+                    <h4 class="settings-subtitle">KI-Modell</h4>
+                    <select id="model-select" class="form-select">
+                        {% for model in models %}
+                        <option value="{{ model.id }}">{{ model.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Erweiterte Einstellungen -->
+                <div class="advanced-settings mt-4">
+                    <h4 class="settings-subtitle">Erweiterte Einstellungen</h4>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label>Qualität</label>
+                            <select id="quality-preset" class="form-select">
+                                <option value="high">Hohe Qualität</option>
+                                <option value="balanced" selected>Ausgewogen</option>
+                                <option value="fast">Schnelle Verarbeitung</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label>Gesichtsglättung</label>
+                            <input type="range" id="face-smoothing" min="0" max="100" value="50">
+                            <span class="value-display">50%</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Farbkorrektur</label>
+                            <input type="range" id="color-correction" min="0" max="100" value="50">
+                            <span class="value-display">50%</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Maske verbessern</label>
+                            <input type="checkbox" id="enhance-mask" checked>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video-spezifische Einstellungen -->
+                <div id="video-settings" class="video-settings mt-4 hidden">
+                    <h4 class="settings-subtitle">Video-Einstellungen</h4>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label>Ausgabequalität</label>
+                            <select id="video-quality" class="form-select">
+                                <option value="original">Original</option>
+                                <option value="high">1080p</option>
+                                <option value="medium" selected>720p</option>
+                                <option value="low">480p</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label>Framerate</label>
+                            <select id="frame-rate" class="form-select">
+                                <option value="original">Original</option>
+                                <option value="60">60 FPS</option>
+                                <option value="30" selected>30 FPS</option>
+                                <option value="24">24 FPS</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Start-Button -->
+                <button id="start-swap" class="btn-primary w-full mt-6" disabled>
+                    Face Swap starten
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fortschrittsanzeige -->
+    <div id="progress-section" class="mt-8 hidden">
+        <div class="progress-container">
+            <div class="progress-bar" style="width: 0%"></div>
+        </div>
+        <div class="progress-details">
+            <span id="progress-status">Verarbeite...</span>
+            <span id="progress-percentage">0%</span>
+        </div>
+    </div>
+
+    <!-- Ergebnisbereich -->
+    <div id="result-section" class="mt-8 hidden">
+        <h3 class="section-title">Ergebnis</h3>
+        <div class="result-container">
+            <img id="result-image" class="result-preview hidden">
+            <video id="result-video" class="result-preview hidden" controls></video>
+        </div>
+        <div class="action-buttons mt-4">
+            <button id="download-result" class="btn-primary">Herunterladen</button>
+            <button id="new-swap" class="btn-secondary">Neuer Face Swap</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Panel Styles */
+.panel {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+/* Upload Styles */
+.upload-box {
+    border: 2px dashed #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.upload-label {
+    display: block;
+    cursor: pointer;
+}
+
+.upload-placeholder {
+    color: #6b7280;
+}
+
+.preview-image, .preview-video {
+    max-width: 100%;
+    max-height: 300px;
+    margin-top: 12px;
+    border-radius: 4px;
+}
+
+/* Settings Styles */
+.settings-subtitle {
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #374151;
+}
+
+.settings-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-select {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+}
+
+/* Progress Styles */
+.progress-container {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: #4f46e5;
+    transition: width 0.3s ease;
+}
+
+.progress-details {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    color: #6b7280;
+}
+
+/* Button Styles */
+.btn-primary {
+    @apply px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50;
+}
+
+.btn-secondary {
+    @apply px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200;
+}
+
+/* Value Display */
+.value-display {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+</style>
+
+<script>
+let currentJobId = null;
+
+// File Preview Handlers
+document.getElementById('source-image').onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('source-preview');
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            preview.parentElement.querySelector('.preview-icon').classList.add('hidden');
+        }
+        reader.readAsDataURL(file);
+    }
+};
+
+document.getElementById('target-image').onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const preview = document.getElementById('target-preview');
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('hidden');
+        preview.parentElement.querySelector('.preview-icon').classList.add('hidden');
+    }
+};
+
+// Form Submission
+document.getElementById('faceswap-form').onsubmit = async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('source', document.getElementById('source-image').files[0]);
+    formData.append('target', document.getElementById('target-image').files[0]);
+    formData.append('model_id', document.getElementById('model-select').value);
+    
+    try {
+        const response = await fetch('/api/projects/current/inference', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            currentJobId = data.job_id;
+            showProcessingStatus();
+            pollStatus();
+        }
+    } catch (error) {
+        console.error('Submission failed:', error);
+    }
+};
+
+function showProcessingStatus() {
+    document.getElementById('faceswap-form').classList.add('hidden');
+    document.getElementById('processing-status').classList.remove('hidden');
+}
+
+async function pollStatus() {
+    if (!currentJobId) return;
+    
+    try {
+        const response = await fetch(`/api/projects/current/inference/${currentJobId}/status`);
+        const data = await response.json();
+        
+        updateProgress(data);
+        
+        if (data.status === 'completed') {
+            showResult(data.output_path);
+        } else if (data.status === 'processing') {
+            setTimeout(pollStatus, 1000);
+        }
+    } catch (error) {
+        console.error('Status polling failed:', error);
+    }
+}
+
+function updateProgress(status) {
+    const progress = (status.frames_processed / status.total_frames) * 100;
+    document.getElementById('progress-bar').style.width = `${progress}%`;
+    document.getElementById('frames-processed').textContent = status.frames_processed;
+}
+
+function showResult(outputPath) {
+    document.getElementById('processing-status').classList.add('hidden');
+    document.getElementById('results').classList.remove('hidden');
+    document.getElementById('result-image').src = outputPath;
+}
+
+function downloadResult() {
+    // TODO: Implement download logic
+}
+
+function newSwap() {
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('faceswap-form').classList.remove('hidden');
+    document.getElementById('faceswap-form').reset();
+    currentJobId = null;
+}
+
+// Neue Funktionen für die erweiterte UI
+let faceDetectionData = null;
+let videoFrames = [];
+let currentFrame = 0;
+
+// Face Detection beim Bildupload
+document.getElementById('source-image').addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const preview = document.getElementById('source-preview');
+        preview.src = URL.createObjectURL(file);
+        
+        // Gesichtserkennung durchführen
+        faceDetectionData = await detectFaces(preview);
+        updateFaceMarkers();
+    }
+});
+
+// Gesichtsanpassungen
+document.querySelectorAll('input[type="range"]').forEach(input => {
+    input.addEventListener('input', updateFacePreview);
+});
+
+function updateFacePreview() {
+    if (!faceDetectionData) return;
+    
+    const scale = document.getElementById('face-scale').value;
+    const x = document.getElementById('face-x').value;
+    const y = document.getElementById('face-y').value;
+    const rotation = document.getElementById('face-rotation').value;
+    
+    // Canvas-Update mit den neuen Werten
+    const canvas = document.getElementById('preview-overlay');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Hier das Gesicht mit den neuen Parametern zeichnen
+    drawFaceOverlay(ctx, faceDetectionData, {scale, x, y, rotation});
+}
+
+// Video Timeline
+document.getElementById('preview-video').addEventListener('loadedmetadata', function() {
+    generateVideoFrames(this);
+});
+
+async function generateVideoFrames(video) {
+    const frameCount = Math.floor(video.duration * 5); // 5 Frames pro Sekunde
+    const container = document.getElementById('timeline-frames');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < frameCount; i++) {
+        video.currentTime = i * 0.2; // Alle 200ms
+        await new Promise(resolve => video.addEventListener('seeked', resolve, { once: true }));
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = 160; // Thumbnail-Größe
+        canvas.height = 90;
+        canvas.getContext('2d').drawImage(video, 0, 0, 160, 90);
+        
+        const frame = document.createElement('div');
+        frame.className = 'w-20 h-full';
+        frame.style.backgroundImage = `url(${canvas.toDataURL()})`;
+        container.appendChild(frame);
+        
+        videoFrames.push(canvas.toDataURL());
+    }
+}
+
+// Wiedergabesteuerung
+document.getElementById('btn-play').addEventListener('click', function() {
+    const video = document.getElementById('preview-video');
+    if (video.paused) {
+        video.play();
+        this.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 8h4v4H8V8z"/>
+        </svg>`;
+    } else {
+        video.pause();
+        this.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
+        </svg>`;
+    }
+});
+
+// Verarbeitung starten
+document.getElementById('btn-process').addEventListener('click', startProcessing);
+
+</script>
+{% endblock %} 

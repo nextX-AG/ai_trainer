@@ -1,3 +1,26 @@
+# AI Trainer Platform
+
+## Vision
+Eine moderne Plattform für KI-Training mit Fokus auf Bild- und Videoanalyse.
+
+## Kernfunktionen
+- Projekt- und Datenverwaltung
+- Automatisiertes Scraping
+- KI-Training und Modellverwaltung
+- Faceswap-Integration
+
+## Technologie-Stack
+- Backend: FastAPI + Python
+- Datenbank: Supabase (PostgreSQL)
+- Frontend: Jinja2 + TailwindCSS
+- ML: TensorFlow/PyTorch
+
+## Entwicklungsprinzipien
+1. Modularität
+2. Skalierbarkeit
+3. Benutzerfreundlichkeit
+4. Testbarkeit
+
 Cursor AI Framework Manifesto
 
 Introduction:
@@ -66,7 +89,7 @@ Distributed Training: Scale workloads across GPUs or local resources, such as He
 
 Evaluation and Feedback Module:
 
-Description: Evaluates the model’s performance and provides actionable insights for improvement.
+Description: Evaluates the model's performance and provides actionable insights for improvement.
 
 Key Features:
 
@@ -90,7 +113,7 @@ Performance Monitoring: Logs and analytics to track deployed model effectiveness
 
 Governance and Compliance Module:
 
-Description: Ensures that the framework’s operations align with legal and ethical guidelines.
+Description: Ensures that the framework's operations align with legal and ethical guidelines.
 
 Key Features:
 

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-section">
+    <!-- Debug Info -->
+    <pre>
+    {{ request.url.path }}
+    </pre>
+    
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="section-title">Model Training</h2>
+            <p class="text-gray-600">{{ model.name }} (v{{ model.version }})</p>
+        </div>
+        <div class="flex space-x-2">
+            <button id="start-training" class="btn-primary" {% if training_job and training_job.status == 'running' %}disabled{% endif %}>
+                Training starten
+            </button>
+            <button id="stop-training" class="btn-danger" {% if not training_job or training_job.status != 'running' %}disabled{% endif %}>
+                Training stoppen
+            </button>
+        </div>
+    </div>
+
+    <!-- Training Konfiguration -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">Training Konfiguration</h3>
+        <form id="training-config">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label for="dataset">Dataset</label>
+                    <select id="dataset" required>
+                        {% for dataset in datasets %}
+                        <option value="{{ dataset.id }}">{{ dataset.name }} ({{ dataset.image_count }} Bilder)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="batch-size">Batch Size</label>
+                    <input type="number" id="batch-size" value="32" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="epochs">Epochs</label>
+                    <input type="number" id="epochs" value="100" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="learning-rate">Learning Rate</label>
+                    <input type="number" id="learning-rate" value="0.001" step="0.0001" required>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Training Status -->
+    {% if training_job %}
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">Training Status</h3>
+        <div class="space-y-4">
+            <div>
+                <div class="flex justify-between mb-1">
+                    <span>Fortschritt</span>
+                    <span>{{ training_job.progress }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ training_job.progress }}%"></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <span class="text-gray-600">Status:</span>
+                    <span class="ml-2 badge badge-{{ training_job.status }}">{{ training_job.status }}</span>
+                </div>
+                <div>
+                    <span class="text-gray-600">Epoch:</span>
+                    <span class="ml-2">{{ training_job.current_epoch }}/{{ training_job.total_epochs }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Training Metriken -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold mb-4">Metriken</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Loss Plot -->
+            <div>
+                <canvas id="loss-chart"></canvas>
+            </div>
+            <!-- Aktuelle Metriken -->
+            <div>
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th class="text-left">Metrik</th>
+                            <th class="text-right">Wert</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, value in training_job.metrics.items() %}
+                        <tr>
+                            <td class="text-gray-600">{{ key }}</td>
+                            <td class="text-right">{{ value }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.badge-running { background: #dbeafe; color: #1e40af; }
+.badge-completed { background: #dcfce7; color: #166534; }
+.badge-failed { background: #fee2e2; color: #991b1b; }
+.badge-pending { background: #fef3c7; color: #92400e; }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startButton = document.getElementById('start-training');
+    const stopButton = document.getElementById('stop-training');
+    let trainingInterval;
+
+    // Training starten
+    startButton.addEventListener('click', async () => {
+        const config = {
+            dataset_id: document.getElementById('dataset').value,
+            batch_size: parseInt(document.getElementById('batch-size').value),
+            epochs: parseInt(document.getElementById('epochs').value),
+            learning_rate: parseFloat(document.getElementById('learning-rate').value)
+        };
+
+        try {
+            const response = await fetch(`/api/models/{{ model.id }}/train`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            });
+
+            if (response.ok) {
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                startProgressPolling();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
+
+    // Training stoppen
+    stopButton.addEventListener('click', async () => {
+        try {
+            const response = await fetch(`/api/models/{{ model.id }}/train/stop`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                stopButton.disabled = true;
+                clearInterval(trainingInterval);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
+
+    // Progress Polling
+    function startProgressPolling() {
+        trainingInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/models/{{ model.id }}/train/status`);
+                const data = await response.json();
+
+                // Update Progress
+                document.querySelector('.progress-bar').style.width = `${data.progress}%`;
+                document.querySelector('.progress-text').textContent = `${data.progress}%`;
+
+                // Update Metrics
+                updateMetrics(data.metrics);
+                updateLossChart(data.loss_history);
+
+                if (data.status !== 'running') {
+                    clearInterval(trainingInterval);
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }, 1000);
+    }
+
+    // Loss Chart initialisieren
+    {% if training_job and training_job.metrics.loss_history %}
+    const ctx = document.getElementById('loss-chart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length: {{ training_job.metrics.loss_history|length }}}, (_, i) => i + 1),
+            datasets: [{
+                label: 'Loss',
+                data: {{ training_job.metrics.loss_history|tojson }},
+                borderColor: 'rgb(59, 130, 246)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %} 

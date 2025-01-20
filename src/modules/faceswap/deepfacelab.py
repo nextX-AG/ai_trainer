@@ -2,9 +2,11 @@ from pathlib import Path
 import subprocess
 import os
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from src.config import FaceSwapConfig
+import json
+import asyncio
 
 @dataclass
 class DFLPaths:
@@ -16,9 +18,11 @@ class DFLPaths:
     merged: Path
 
 class DeepFaceLabIntegration:
-    def __init__(self, project_id: str, config: FaceSwapConfig):
+    def __init__(self, project_id: str, config: Optional[Dict] = None):
         self.project_id = project_id
-        self.config = config
+        self.config = config or {}
+        self.workspace_path = Path(f"data/projects/{project_id}/deepfacelab")
+        self.dfl_path = Path("external/DeepFaceLab")
         self.logger = logging.getLogger(__name__)
         self.paths = self._initialize_paths()
         
@@ -35,82 +39,128 @@ class DeepFaceLabIntegration:
         )
         
     async def prepare_workspace(self):
-        """Bereitet den Arbeitsbereich vor"""
+        """Bereitet den Workspace für ein neues Projekt vor"""
         try:
-            # Erstelle Verzeichnisse
-            for path in self.paths.__dict__.values():
-                path.mkdir(parents=True, exist_ok=True)
-                
-            # Initialisiere DFL-Umgebung
-            self._run_dfl_command("init")
-            
-            return {"status": "success", "message": "Workspace erfolgreich erstellt"}
+            # Verzeichnisse erstellen
+            self.workspace_path.mkdir(parents=True, exist_ok=True)
+            (self.workspace_path / "aligned").mkdir(exist_ok=True)
+            (self.workspace_path / "models").mkdir(exist_ok=True)
+
+            return {"status": "success", "workspace": str(self.workspace_path)}
         except Exception as e:
-            self.logger.error(f"Fehler bei Workspace-Erstellung: {str(e)}")
+            self.logger.error(f"Workspace preparation failed: {e}")
             raise
             
     async def extract_faces(self, video_path: Path):
         """Extrahiert Gesichter aus dem Video"""
         try:
-            # Kopiere Video in source/target Verzeichnis
-            # Extrahiere Frames und Gesichter
-            self._run_dfl_command("extract", {
-                "input-dir": video_path,
-                "output-dir": self.paths.source,
-                "detector": "s3fd",
-                "face-type": "whole_face",
-                "max-faces-from-image": 1
-            })
-            
-            return {"status": "success", "message": "Gesichter erfolgreich extrahiert"}
-        except Exception as e:
-            self.logger.error(f"Fehler bei Gesichtsextraktion: {str(e)}")
-            raise
-            
-    async def train_model(self):
-        """Startet das Training des Models"""
-        try:
-            # Konfiguriere und starte Training
-            training_args = {
-                "model-dir": self.paths.models,
-                "model-name": "SAEHD",
-                "batch-size": self.config.batch_size,
-                "resolution": self.config.resolution,
-                "iterations": self.config.iterations
-            }
-            
-            # Starte Training-Prozess
-            process = self._run_dfl_command("train", training_args, async_mode=True)
-            
-            return {
-                "status": "training_started",
-                "process_id": process.pid,
-                "model_path": str(self.paths.models)
-            }
-        except Exception as e:
-            self.logger.error(f"Fehler beim Training: {str(e)}")
-            raise
-            
-    async def convert_video(self, input_path: Path, output_path: Path, options: Dict[str, Any]):
-        """Konvertiert ein Video mit dem trainierten Model"""
-        try:
-            conversion_args = {
-                "input-dir": input_path,
-                "output-dir": output_path,
-                "model-dir": self.paths.models,
-                "denoise-power": options.get("denoise_power", 0.4),
-                "color-correction": options.get("color_correction", True),
-                "face-alignment": options.get("face_alignment", True)
-            }
-            
-            self._run_dfl_command("convert", conversion_args)
-            
+            output_dir = self.workspace_path / "aligned"
+            cmd = [
+                "python",
+                str(self.dfl_path / "main.py"),
+                "extract",
+                "--input-dir", str(video_path.parent),
+                "--output-dir", str(output_dir),
+                "--detector", "s3fd",
+                "--face-type", "full_face",
+                "--debug-dir", str(self.workspace_path / "debug")
+            ]
+
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+
+            if process.returncode != 0:
+                raise Exception(f"Face extraction failed: {stderr.decode()}")
+
+            # Zähle extrahierte Gesichter
+            face_count = len(list(output_dir.glob("*.jpg")))
             return {
                 "status": "success",
-                "output_path": str(output_path)
+                "faces_extracted": face_count,
+                "output_dir": str(output_dir)
             }
+
         except Exception as e:
-            self.logger.error(f"Fehler bei Konvertierung: {str(e)}")
+            self.logger.error(f"Face extraction failed: {e}")
+            raise
+            
+    async def train_model(self, model_name: str = "SAEHD", iterations: int = 100000):
+        """Startet das Training des Models"""
+        try:
+            model_dir = self.workspace_path / "models" / model_name
+            model_dir.mkdir(exist_ok=True)
+
+            cmd = [
+                "python",
+                str(self.dfl_path / "main.py"),
+                "train",
+                "--training-data-src-dir", str(self.workspace_path / "aligned"),
+                "--training-data-dst-dir", str(self.workspace_path / "aligned"),
+                "--model-dir", str(model_dir),
+                "--model", model_name,
+                "--iterations", str(iterations)
+            ]
+
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            # Training-Status in Datei speichern
+            status_file = self.workspace_path / "training_status.json"
+            status = {
+                "model": model_name,
+                "iterations": iterations,
+                "status": "running",
+                "current_iteration": 0
+            }
+            status_file.write_text(json.dumps(status))
+
+            return {
+                "status": "training_started",
+                "model": model_name,
+                "workspace": str(self.workspace_path)
+            }
+
+        except Exception as e:
+            self.logger.error(f"Training failed: {e}")
+            raise
+            
+    async def convert_video(self, input_video: Path, output_path: Path):
+        """Konvertiert ein Video mit dem trainierten Model"""
+        try:
+            cmd = [
+                "python",
+                str(self.dfl_path / "main.py"),
+                "convert",
+                "--input-dir", str(input_video.parent),
+                "--output-dir", str(output_path.parent),
+                "--model-dir", str(self.workspace_path / "models" / "SAEHD"),
+                "--converter", "SAEHD"
+            ]
+
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+
+            if process.returncode != 0:
+                raise Exception(f"Video conversion failed: {stderr.decode()}")
+
+            return {
+                "status": "success",
+                "output_video": str(output_path)
+            }
+
+        except Exception as e:
+            self.logger.error(f"Video conversion failed: {e}")
             raise
             
     def _run_dfl_command(self, command: str, args: Dict[str, Any] = None, async_mode: bool = False):

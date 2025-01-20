@@ -9,11 +9,18 @@ supabase = get_db()
 
 @router.get("/projects", include_in_schema=False)
 async def projects_list(request: Request):
-    projects = supabase.table('projects').select("*").order('created_at', desc=True).execute()
-    return templates.TemplateResponse("projects/index.html", {
-        "request": request,
-        "projects": projects.data
-    })
+    try:
+        projects = supabase.table('projects').select("*").order('created_at', desc=True).execute()
+        return templates.TemplateResponse("projects/index.html", {
+            "request": request,
+            "projects": projects.data
+        })
+    except Exception as e:
+        print(f"Error fetching projects: {e}")
+        return templates.TemplateResponse("projects/index.html", {
+            "request": request,
+            "projects": []
+        })
 
 @router.get("/projects/new", include_in_schema=False)
 async def new_project(request: Request):

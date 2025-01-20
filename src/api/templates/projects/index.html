@@ -4,13 +4,73 @@
 
 {% block content %}
 <div class="space-y-6">
+    <!-- Projekt erstellen -->
     <div class="page-section">
-        <div class="flex justify-between items-center mb-4">
-            <h1 class="text-2xl font-bold">Projekte</h1>
-            <a href="/projects/new" class="btn-primary">Neues Projekt</a>
-        </div>
-        
-        <div class="space-y-4">
+        <h2 class="section-title">Neues Projekt</h2>
+        <form id="createProjectForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Name</label>
+                <input type="text" name="name" required class="form-input">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Beschreibung</label>
+                <textarea name="description" class="form-input"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Owner</label>
+                <input type="text" name="owner" required class="form-input">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Quelltyp</label>
+                <select name="source_type" required class="form-input" id="sourceType">
+                    <option value="video">Video</option>
+                    <option value="image">Bilder</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Datenquelle</label>
+                <select name="data_source" required class="form-input" id="dataSource">
+                    <option value="url">Direkte URLs</option>
+                    <option value="porndb">PornDB API</option>
+                    <option value="search">Suche</option>
+                </select>
+            </div>
+            <!-- URL Input (wird nur bei data_source=url angezeigt) -->
+            <div id="urlInput" class="source-input">
+                <label class="block text-sm font-medium text-gray-700">URLs (eine pro Zeile)</label>
+                <textarea name="source_urls" class="form-input" placeholder="https://example.com/video1.mp4"></textarea>
+            </div>
+            <!-- Suche Input (wird nur bei data_source=search angezeigt) -->
+            <div id="searchInput" class="source-input hidden">
+                <label class="block text-sm font-medium text-gray-700">Suchbegriff</label>
+                <input type="text" name="search_query" class="form-input" placeholder="z.B. workout training">
+            </div>
+            <!-- PornDB Config (wird nur bei data_source=porndb angezeigt) -->
+            <div id="porndbConfig" class="source-input hidden">
+                <label class="block text-sm font-medium text-gray-700">PornDB Einstellungen</label>
+                <textarea name="porndb_config" class="form-input" placeholder='{
+    "categories": ["fitness", "sport"],
+    "tags": ["workout", "gym"],
+    "min_rating": 7
+}'></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Scraping-Konfiguration</label>
+                <textarea name="scraping_config" class="form-input" placeholder='{
+    "min_duration": 10,
+    "max_duration": 300,
+    "quality": "720p",
+    "limit": 100
+}'></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Projekt erstellen</button>
+        </form>
+    </div>
+
+    <!-- Projektliste -->
+    <div class="page-section">
+        <h2 class="section-title">Vorhandene Projekte</h2>
+        <div id="projectList" class="space-y-4">
             {% if projects %}
                 {% for project in projects %}
                     <div class="project-card">
@@ -24,9 +84,9 @@
                                     Status: {{ project.status }}
                                 </div>
                             </div>
-                            <a href="/projects/{{ project.id }}" class="text-indigo-600 hover:text-indigo-900">
-                                Details
-                            </a>
+                            <div class="space-x-2">
+                                <a href="/projects/{{ project.id }}" class="btn-primary">Details</a>
+                            </div>
                         </div>
                     </div>
                 {% endfor %}
@@ -36,4 +96,72 @@
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Zeige/Verstecke Eingabefelder basierend auf der ausgewählten Datenquelle
+document.getElementById('dataSource').addEventListener('change', function() {
+    const sourceInputs = document.querySelectorAll('.source-input');
+    sourceInputs.forEach(input => input.classList.add('hidden'));
+    
+    switch(this.value) {
+        case 'url':
+            document.getElementById('urlInput').classList.remove('hidden');
+            break;
+        case 'porndb':
+            document.getElementById('porndbConfig').classList.remove('hidden');
+            break;
+        case 'search':
+            document.getElementById('searchInput').classList.remove('hidden');
+            break;
+    }
+});
+
+// Form submission
+document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        owner: formData.get('owner'),
+        source_type: formData.get('source_type'),
+        data_source: formData.get('data_source'),
+        scraping_config: JSON.parse(formData.get('scraping_config') || '{}')
+    };
+
+    // Füge quellenspezifische Daten hinzu
+    switch(formData.get('data_source')) {
+        case 'url':
+            data.source_urls = formData.get('source_urls').split('\n').filter(url => url.trim());
+            break;
+        case 'porndb':
+            data.porndb_config = JSON.parse(formData.get('porndb_config') || '{}');
+            break;
+        case 'search':
+            data.search_query = formData.get('search_query');
+            break;
+    }
+
+    try {
+        const response = await fetch('/api/projects/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            const project = await response.json();
+            window.location.href = `/projects/${project.id}`;
+        } else {
+            alert('Fehler beim Erstellen des Projekts');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fehler beim Erstellen des Projekts');
+    }
+});
+</script>
 {% endblock %}

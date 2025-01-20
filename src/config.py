@@ -84,20 +84,22 @@ class FaceSwapConfig:
 
 @dataclass
 class TrainingConfig:
-    # Erweiterte Parameter für Faceswap-Training
-    model_type: str
-    epochs: int
-    learning_rate: float
-    batch_size: int
-    validation_split: float = 0.2
-    early_stopping_patience: int = 5
-    checkpoint_frequency: int = 10
-    face_swap_config: FaceSwapConfig = None
+    batch_size: int = 4
+    epochs: int = 100
+    learning_rate: float = 0.0001
+    num_workers: int = 4
+    checkpoint_interval: int = 1000
+    validation_interval: int = 100
     
-    # Spezifische Parameter für Video-Training
-    temporal_coherence: bool = True  # Für flüssigere Übergänge
-    frame_sequence_length: int = 16  # Anzahl der Frames pro Sequenz
-    motion_consistency: bool = True  # Für bessere Bewegungsübergänge
+    # SimSwap spezifische Parameter
+    id_loss_weight: float = 10.0
+    attr_loss_weight: float = 10.0
+    rec_loss_weight: float = 10.0
+    
+    # Modell Parameter
+    latent_dim: int = 512
+    n_layers: int = 50
+    channel_multiplier: int = 2
 
 @dataclass
 class ProjectStructure:
@@ -153,40 +155,53 @@ class ProjectConfig:
         structure.create_structure()
 
 class Settings(BaseSettings):
-    # Erforderliche Felder
+    # Supabase Settings
     SUPABASE_URL: str
     SUPABASE_KEY: str
-    
+
     # API Settings
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
     DEBUG: bool = True
-    
+
+    # PornDB API
+    PORNDB_API_KEY: str
+
+    # Scraping Settings
+    MAX_CONCURRENT_DOWNLOADS: int = 5
+    DOWNLOAD_TIMEOUT: int = 30
+    USER_AGENT: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+    # Storage
+    STORAGE_PATH: str = "./data"
+    TEMP_PATH: str = "./temp"
+
     # Database
     DATABASE_URL: str = "sqlite:///./dev.db"
-    
+
     # Processing
     FACE_DETECTION_MODEL: str = "mtcnn"
     MIN_CONFIDENCE: float = 0.9
     BATCH_SIZE: int = 32
-    
+
     # Logging
     LOG_LEVEL: str = "DEBUG"
     LOG_FORMAT: str = "json"
-    
+
     # Paths
-    DATA_DIR: str = "./data"
     MODELS_DIR: str = "./models"
     LOGS_DIR: str = "./logs"
-    
-    # GPU
-    CUDA_VISIBLE_DEVICES: str = "0"
-    
-    model_config = SettingsConfigDict(
-        env_file=".env.development",
-        case_sensitive=True
-    )
 
-@lru_cache()
-def get_settings() -> Settings:
+    # GPU Settings
+    CUDA_VISIBLE_DEVICES: Optional[str] = "0"
+
+    # DFL Server Settings
+    DFL_SERVER_URL: str = "http://your.hetzner.server:8000"
+    DFL_API_KEY: str = "your_secret_key"
+
+    class Config:
+        env_file = ".env.development"
+        case_sensitive = True
+
+def get_settings():
     return Settings() 
