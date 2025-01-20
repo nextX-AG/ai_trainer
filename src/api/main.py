@@ -1,8 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 from pathlib import Path
+from sqlalchemy.orm import Session
+from src.utils.db import get_db
+from supabase import Client
+from src.database import get_db as supabase_get_db
 
 app = FastAPI()
 
@@ -30,10 +34,25 @@ async def search_videos(project_id: str, request: SearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/projects/{project_id}/download")
-async def download_video(project_id: str, request: DownloadRequest):
+async def download_video(
+    project_id: str, 
+    request: DownloadRequest,
+    db: Client = Depends(supabase_get_db)
+):
     try:
-        # TODO: Implementiere Video-Download
-        return {"downloadId": "test-download-id"}
+        # Erstelle neuen Download-Eintrag in Supabase
+        data = {
+            "id": generate_download_id(),
+            "project_id": project_id,
+            "url": request.videoId,
+            "status": "pending",
+            "progress": 0.0,
+            "metadata": {}
+        }
+        
+        result = db.table("downloads").insert(data).execute()
+        
+        return {"downloadId": data["id"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

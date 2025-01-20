@@ -15,21 +15,17 @@ setup(
         "tensorflow>=2.0.0",
         "mtcnn>=0.1.0",
         
+        # Supabase
+        "supabase-py==0.0.2",
+        "postgrest-py==0.4.0",
+        "python-jose[cryptography]>=3.3.0",
+        "requests==2.25.1",
+        
         # API und Web
         "fastapi>=0.68.0",
         "uvicorn>=0.15.0",
         "python-multipart>=0.0.5",
         "aiofiles>=0.7.0",
-        
-        # Scraping und Datenerfassung
-        "scrapy>=2.5.0",
-        "beautifulsoup4>=4.9.0",
-        "requests>=2.26.0",
-        
-        # Datenbank
-        "sqlalchemy>=1.4.0",
-        "alembic>=1.7.0",
-        "psycopg2-binary>=2.9.0",
     ],
     extras_require={
         'dev': [

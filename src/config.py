@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 from datetime import datetime
+from functools import lru_cache
+from pydantic import BaseSettings
 
 @dataclass
 class ProjectConfig:
@@ -148,4 +150,27 @@ class ProjectConfig:
     def initialize_project(self):
         """Initialisiert die Projektstruktur"""
         structure = ProjectStructure(self.data_structure.project_root)
-        structure.create_structure() 
+        structure.create_structure()
+
+class Settings(BaseSettings):
+    """Zentrale Konfigurationsverwaltung"""
+    # Supabase Settings
+    SUPABASE_URL: str
+    SUPABASE_KEY: str
+    
+    # API Settings
+    API_HOST: str = "0.0.0.0"
+    API_PORT: int = 8000
+    DEBUG: bool = True
+    
+    # Processing
+    FACE_DETECTION_MODEL: str = "mtcnn"
+    MIN_CONFIDENCE: float = 0.9
+    BATCH_SIZE: int = 32
+    
+    class Config:
+        env_file = ".env.development"
+
+@lru_cache()
+def get_settings():
+    return Settings() 
