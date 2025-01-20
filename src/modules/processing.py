@@ -6,6 +6,7 @@ import numpy as np
 from pathlib import Path
 from typing import List, Tuple
 from PIL import Image
+from mtcnn import MTCNN
 
 class ProcessingModule(BaseModule):
     def __init__(self, config: ProcessingConfig):
@@ -16,15 +17,16 @@ class ProcessingModule(BaseModule):
     def initialize(self):
         self.logger.info("Initialisiere Processing Modul")
         # Face Detection Model laden
-        self._initialize_face_detector()
+        if self.config.face_detection_model == "mtcnn":
+            self.face_detector = MTCNN()
+        else:
+            self.face_detector = cv2.CascadeClassifier(
+                cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            )
         
     def validate(self):
-        if not isinstance(self.config.input_size, tuple) or len(self.config.input_size) != 2:
-            raise ValueError("input_size muss ein Tuple mit (height, width) sein")
+        self.config.validate()
         
-        if not hasattr(self, 'face_detector'):
-            raise RuntimeError("Face detector wurde nicht initialisiert")
-            
     def execute(self, input_data: List[Path]) -> List[np.ndarray]:
         """
         Verarbeitet die eingegebenen Bilder
@@ -62,51 +64,12 @@ class ProcessingModule(BaseModule):
         # Ressourcen freigeben
         self.face_detector = None
         
-    def _initialize_face_detector(self):
-        """Initialisiert das Gesichtserkennungsmodell"""
-        if self.config.face_detection_model == "mtcnn":
-            from mtcnn import MTCNN
-            self.face_detector = MTCNN()  # Verwende Standardparameter
-        elif self.config.face_detection_model == "opencv":
-            # Erweiterte Cascades für verschiedene Gesichtspositionen
-            cascade_files = [
-                'haarcascade_frontalface_default.xml',
-                'haarcascade_frontalface_alt.xml',
-                'haarcascade_frontalface_alt2.xml',
-                'haarcascade_frontalface_alt_tree.xml',  # Für komplexere Gesichtsstrukturen
-                'haarcascade_profileface.xml',  # Für Seitenansichten
-            ]
-            
-            self.face_detectors = []
-            for cascade_file in cascade_files:
-                cascade_path = cv2.data.haarcascades + cascade_file
-                detector = cv2.CascadeClassifier(cascade_path)
-                if not detector.empty():
-                    self.face_detectors.append(detector)
-            
-            if not self.face_detectors:
-                raise RuntimeError("Konnte keine Haar Cascades laden")
-        elif self.config.face_detection_model == "dlib":
-            # Dlib Face Detector initialisieren
-            try:
-                import dlib
-                self.face_detector = dlib.get_frontal_face_detector()
-            except ImportError:
-                raise RuntimeError("Dlib ist nicht installiert")
-        else:
-            raise ValueError(f"Unbekanntes Face Detection Model: {self.config.face_detection_model}")
-            
     def _load_and_preprocess(self, image_path: Path) -> np.ndarray:
         """Lädt und preprocessed ein einzelnes Bild"""
-        # Lade das Bild
-        image = self._load_image(image_path)
-        
-        # Bildverbesserung
-        image = self._enhance_image(image)
-        
-        # Auf einheitliche Größe bringen
-        image = cv2.resize(image, self.config.input_size)
-        return image
+        img = cv2.imread(str(image_path))
+        if img is None:
+            raise ValueError(f"Konnte Bild nicht laden: {image_path}")
+        return cv2.resize(img, self.config.input_size)
 
     def _enhance_image(self, image: np.ndarray) -> np.ndarray:
         """Verbesserte Bildvorverarbeitung"""
@@ -141,123 +104,18 @@ class ProcessingModule(BaseModule):
     def _detect_faces(self, image: np.ndarray) -> List[np.ndarray]:
         """Erkennt Gesichter im Bild"""
         if self.config.face_detection_model == "mtcnn":
-            # MTCNN erwartet RGB
             rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            
-            # Erkenne Gesichter
             detections = self.face_detector.detect_faces(rgb_image)
-            
             faces = []
             for detection in detections:
-                confidence = detection['confidence']
-                if confidence >= self.config.min_confidence:
+                if detection['confidence'] >= self.config.min_confidence:
                     x, y, w, h = detection['box']
-                    
-                    # Füge Padding hinzu
-                    padding_h = int(h * 0.3)
-                    padding_w = int(w * 0.3)
-                    
-                    x1 = max(0, x - padding_w)
-                    y1 = max(0, y - padding_h)
-                    x2 = min(image.shape[1], x + w + padding_w)
-                    y2 = min(image.shape[0], y + h + padding_h)
-                    
-                    face_img = image[y1:y2, x1:x2]
-                    
-                    # Speichere zusätzliche Informationen
-                    face_info = {
-                        'image': face_img,
-                        'confidence': confidence,
-                        'keypoints': detection['keypoints']
-                    }
-                    faces.append(face_info)
-            
-            # Sortiere nach Konfidenz
-            faces.sort(key=lambda x: x['confidence'], reverse=True)
-            
-            # Gib nur die Bilder zurück
-            return [face['image'] for face in faces]
-        
-        elif self.config.face_detection_model == "opencv":
-            # Verbessere Bildqualität
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            gray = cv2.equalizeHist(gray)
-            
-            # Erweiterte Parameter für schwierige Fälle
-            scale_factors = [1.05, 1.08, 1.1, 1.15]  # Feinere Abstufung
-            min_neighbors_values = [2, 3, 4]  # Weniger restriktiv
-            min_sizes = [(20, 20), (30, 30), (50, 50)]
-            
-            all_faces = []
-            
-            # Versuche verschiedene Bildrotationen
-            angles = [0, -15, 15]  # Probiere verschiedene Winkel
-            
-            for angle in angles:
-                if angle != 0:
-                    # Rotiere das Bild
-                    height, width = gray.shape[:2]
-                    center = (width/2, height/2)
-                    rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-                    rotated_gray = cv2.warpAffine(gray, rotation_matrix, (width, height))
-                    rotated_image = cv2.warpAffine(image, rotation_matrix, (width, height))
-                else:
-                    rotated_gray = gray
-                    rotated_image = image
-                
-                # Verwende alle verfügbaren Detektoren
-                for detector in self.face_detectors:
-                    for scale_factor in scale_factors:
-                        for min_neighbors in min_neighbors_values:
-                            for min_size in min_sizes:
-                                faces = detector.detectMultiScale(
-                                    rotated_gray,
-                                    scaleFactor=scale_factor,
-                                    minNeighbors=min_neighbors,
-                                    minSize=min_size,
-                                    maxSize=(int(image.shape[0]*0.95), int(image.shape[1]*0.95))
-                                )
-                                
-                                if len(faces) > 0:
-                                    for (x, y, w, h) in faces:
-                                        # Größerer Bereich für bessere Erfassung
-                                        padding_h = int(h * 0.4)  # 40% vertikales Padding
-                                        padding_w = int(w * 0.3)  # 30% horizontales Padding
-                                        
-                                        x1 = max(0, x - padding_w)
-                                        y1 = max(0, y - padding_h)
-                                        x2 = min(rotated_image.shape[1], x + w + padding_w)
-                                        y2 = min(rotated_image.shape[0], y + h + padding_h)
-                                        
-                                        face_img = rotated_image[y1:y2, x1:x2]
-                                        
-                                        if self._is_valid_face(face_img):
-                                            all_faces.append(face_img)
-            
-            # Entferne Duplikate mit angepasstem Schwellwert
-            if all_faces:
-                filtered_faces = self._remove_duplicates(all_faces, overlap_threshold=0.3)
-                return filtered_faces
-            
-            return all_faces
-        
-        elif self.config.face_detection_model == "dlib":
-            # Konvertiere zu RGB für dlib
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            # Erkenne Gesichter
-            face_locations = self.face_detector(rgb_image)
-            
-            faces = []
-            for face in face_locations:
-                x = face.left()
-                y = face.top()
-                w = face.right() - x
-                h = face.bottom() - y
-                faces.append(image[y:y+h, x:x+w])
-            
+                    faces.append(image[y:y+h, x:x+w])
             return faces
-        
-        return []
+        else:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            faces = self.face_detector.detectMultiScale(gray, 1.1, 4)
+            return [image[y:y+h, x:x+w] for (x, y, w, h) in faces]
         
     def _apply_augmentation(self, images: List[np.ndarray]) -> List[np.ndarray]:
         """Wendet Datenaugmentation auf die Bilder an"""

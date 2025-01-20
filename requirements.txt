@@ -1,7 +1,24 @@
+# Basis-Dependencies
 numpy>=1.19.0
 opencv-python-headless>=4.5.0  # Verwende headless Version für bessere WebP-Unterstützung
-pytest>=6.0.0
 pillow>=8.0.0  # Für zusätzliche Bildformat-Unterstützung
 dlib>=19.22.0  # Optional, wenn wir dlib verwenden wollen
 tensorflow>=2.0.0  # Für MTCNN
-mtcnn>=0.1.0 
+mtcnn>=0.1.0
+
+# API und Web
+fastapi>=0.68.0
+uvicorn>=0.15.0
+python-multipart>=0.0.5
+aiofiles>=0.7.0
+
+# Testing und Entwicklung
+pytest>=6.0.0
+pytest-cov>=2.0.0  # Für Testabdeckung
+black>=21.0.0  # Für Code-Formatierung
+isort>=5.0.0  # Für Import-Sortierung
+mypy>=0.910
+pylint>=2.9.0
+
+# Logging und Monitoring
+python-json-logger>=2.0.0 

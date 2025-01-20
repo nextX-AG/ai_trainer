@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 from datetime import datetime
 
@@ -42,11 +42,20 @@ class DataStructureConfig:
 
 @dataclass
 class ProcessingConfig:
-    input_size: tuple
+    input_size: Tuple[int, int]
+    augmentation_enabled: bool
     face_detection_model: str
     min_confidence: float = 0.9
     batch_size: int = 32
     
+    def validate(self):
+        if not isinstance(self.input_size, tuple) or len(self.input_size) != 2:
+            raise ValueError("input_size muss ein Tuple mit zwei Werten sein")
+        if not isinstance(self.augmentation_enabled, bool):
+            raise ValueError("augmentation_enabled muss ein Boolean sein")
+        if self.face_detection_model not in ["opencv", "mtcnn"]:
+            raise ValueError("Nicht unterstütztes Gesichtserkennungsmodell")
+
 @dataclass
 class AugmentationConfig:
     enabled: bool = True
