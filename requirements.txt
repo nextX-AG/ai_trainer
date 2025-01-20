@@ -1,0 +1,7 @@
+numpy>=1.19.0
+opencv-python-headless>=4.5.0  # Verwende headless Version für bessere WebP-Unterstützung
+pytest>=6.0.0
+pillow>=8.0.0  # Für zusätzliche Bildformat-Unterstützung
+dlib>=19.22.0  # Optional, wenn wir dlib verwenden wollen
+tensorflow>=2.0.0  # Für MTCNN
+mtcnn>=0.1.0 
