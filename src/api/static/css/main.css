@@ -1,0 +1,42 @@
+/* Custom styles können hier hinzugefügt werden */
+.form-input {
+    @apply mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500;
+}
+
+.btn-primary {
+    @apply bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors;
+}
+
+.project-card {
+    @apply border rounded-lg p-4 hover:bg-gray-50 transition-colors;
+}
+
+.project-title {
+    @apply text-lg font-medium text-gray-900;
+}
+
+.project-description {
+    @apply text-sm text-gray-600;
+}
+
+.project-meta {
+    @apply mt-2 text-sm text-gray-500;
+}
+
+/* Navigation */
+.nav-link {
+    @apply inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300;
+}
+
+.nav-link.active {
+    @apply border-b-2 border-indigo-500 text-gray-900;
+}
+
+/* Page sections */
+.page-section {
+    @apply bg-white shadow rounded-lg p-6 mb-6;
+}
+
+.section-title {
+    @apply text-lg font-semibold mb-4;
+} 

@@ -16,7 +16,7 @@ setup(
         "mtcnn>=0.1.0",
         
         # Supabase
-        "supabase-py==0.0.2",
+        "supabase",
         "postgrest-py==0.4.0",
         "python-jose[cryptography]>=3.3.0",
         "requests==2.25.1",

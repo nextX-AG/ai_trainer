@@ -3,7 +3,7 @@ from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 from datetime import datetime
 from functools import lru_cache
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 @dataclass
 class ProjectConfig:
@@ -153,8 +153,7 @@ class ProjectConfig:
         structure.create_structure()
 
 class Settings(BaseSettings):
-    """Zentrale Konfigurationsverwaltung"""
-    # Supabase Settings
+    # Erforderliche Felder
     SUPABASE_URL: str
     SUPABASE_KEY: str
     
@@ -163,14 +162,31 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     DEBUG: bool = True
     
+    # Database
+    DATABASE_URL: str = "sqlite:///./dev.db"
+    
     # Processing
     FACE_DETECTION_MODEL: str = "mtcnn"
     MIN_CONFIDENCE: float = 0.9
     BATCH_SIZE: int = 32
     
-    class Config:
-        env_file = ".env.development"
+    # Logging
+    LOG_LEVEL: str = "DEBUG"
+    LOG_FORMAT: str = "json"
+    
+    # Paths
+    DATA_DIR: str = "./data"
+    MODELS_DIR: str = "./models"
+    LOGS_DIR: str = "./logs"
+    
+    # GPU
+    CUDA_VISIBLE_DEVICES: str = "0"
+    
+    model_config = SettingsConfigDict(
+        env_file=".env.development",
+        case_sensitive=True
+    )
 
 @lru_cache()
-def get_settings():
+def get_settings() -> Settings:
     return Settings() 

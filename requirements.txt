@@ -17,6 +17,9 @@ fastapi>=0.68.0
 uvicorn>=0.15.0
 python-multipart>=0.0.5
 aiofiles>=0.7.0
+jinja2>=3.0.0
+python-dotenv>=0.19.0
+fastapi-utils>=0.2.1
 
 # Testing und Entwicklung
 pytest==6.2.5  # Spezifische Version für Supabase
@@ -27,4 +30,7 @@ mypy>=0.910
 pylint>=2.9.0
 
 # Logging und Monitoring
-python-json-logger>=2.0.0 
+python-json-logger>=2.0.0
+
+# Added from the code block
+pydantic-settings>=2.0.0 
