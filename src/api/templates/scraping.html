@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}AI Trainer - Scraping{% endblock %}
+
+{% block content %}
+<div class="page-section">
+    <!-- Debug Info nur wenn explizit angefordert -->
+    {% if debug and show_debug_info %}
+    <div class="bg-yellow-100 p-4 mb-6">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="font-bold">Debug Information</h3>
+            <button onclick="this.parentElement.parentElement.style.display='none'" class="text-gray-500 hover:text-gray-700">×</button>
+        </div>
+        <pre class="text-xs overflow-auto">{{ config|tojson(indent=2) if config else "Keine Konfiguration" }}</pre>
+    </div>
+    {% endif %}
+
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="section-title">Scraping Konfiguration</h2>
+    </div>
+
+    <!-- Scraping Konfiguration -->
+    <div class="bg-white p-6 rounded-lg shadow">
+        <form id="scraping-form" class="space-y-6">
+            <!-- Quellen -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4">Datenquellen</h3>
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="source-porndb" class="rounded" checked>
+                        <label for="source-porndb">PornDB API</label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="source-instagram" class="rounded">
+                        <label for="source-instagram">Instagram</label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="source-pinterest" class="rounded">
+                        <label for="source-pinterest">Pinterest</label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="source-google" class="rounded">
+                        <label for="source-google">Google Images</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PornDB Spezifische Einstellungen -->
+            <div id="porndb-settings" class="border-t pt-4">
+                <h3 class="text-lg font-semibold mb-4">PornDB Einstellungen</h3>
+                <div class="space-y-4">
+                    <!-- Suchoptionen -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Suchtyp</label>
+                            <select id="porndb-search-type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="performers">Performers</option>
+                                <option value="scenes">Scenes</option>
+                                <option value="movies">Movies</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Sortierung</label>
+                            <select id="porndb-sort" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="name">Name</option>
+                                <option value="date">Datum</option>
+                                <option value="views">Aufrufe</option>
+                                <option value="rating">Bewertung</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Suchbegriff -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Suchbegriff</label>
+                        <input type="text" id="porndb-search" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                               placeholder="Name oder Suchbegriff">
+                    </div>
+
+                    <!-- Paging -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Seite</label>
+                            <input type="number" id="porndb-page" value="1" min="1" 
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Ergebnisse pro Seite</label>
+                            <input type="number" id="porndb-take" value="50" min="1" max="100"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Filter -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Geschlecht</label>
+                            <select id="porndb-gender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="">Alle</option>
+                                <option value="f">Weiblich</option>
+                                <option value="m">Männlich</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Status</label>
+                            <select id="porndb-status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="">Alle</option>
+                                <option value="active">Aktiv</option>
+                                <option value="inactive">Inaktiv</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keywords -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4">Suchbegriffe</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Keywords (durch Komma getrennt)</label>
+                        <input type="text" id="keywords" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Minimale Bildanzahl</label>
+                            <input type="number" id="min-images" value="100" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Maximale Bildanzahl</label>
+                            <input type="number" id="max-images" value="1000" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4">Filter</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="filter-face-only" class="rounded" checked>
+                        <label for="filter-face-only">Nur Bilder mit Gesichtern</label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="filter-min-resolution" class="rounded" checked>
+                        <label for="filter-min-resolution">Mindestauflösung: 1080p</label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="filter-adult-content" class="rounded">
+                        <label for="filter-adult-content">Adult Content filtern</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end space-x-3 pt-6">
+                <button type="button" class="btn-secondary" onclick="resetForm()">
+                    Zurücksetzen
+                </button>
+                <button type="submit" class="btn-primary">
+                    Scraping starten
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function resetForm() {
+    document.getElementById('scraping-form').reset();
+}
+
+document.getElementById('scraping-form').onsubmit = async function(e) {
+    e.preventDefault();
+    
+    const config = {
+        sources: {
+            porndb: document.getElementById('source-porndb').checked,
+            instagram: document.getElementById('source-instagram').checked,
+            pinterest: document.getElementById('source-pinterest').checked,
+            google: document.getElementById('source-google').checked
+        },
+        porndb: {
+            searchType: document.getElementById('porndb-search-type').value,
+            sort: document.getElementById('porndb-sort').value,
+            search: document.getElementById('porndb-search').value,
+            page: parseInt(document.getElementById('porndb-page').value),
+            take: parseInt(document.getElementById('porndb-take').value),
+            gender: document.getElementById('porndb-gender').value,
+            status: document.getElementById('porndb-status').value
+        },
+        keywords: document.getElementById('keywords').value.split(',').map(k => k.trim()),
+        limits: {
+            min: parseInt(document.getElementById('min-images').value),
+            max: parseInt(document.getElementById('max-images').value)
+        },
+        filters: {
+            faceOnly: document.getElementById('filter-face-only').checked,
+            minResolution: document.getElementById('filter-min-resolution').checked,
+            adultContent: document.getElementById('filter-adult-content').checked
+        }
+    };
+    
+    try {
+        const response = await fetch('/api/scraping/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-PORNDB-APIKEY': config.porndb.apiKey // PornDB API Key im Header
+            },
+            body: JSON.stringify(config)
+        });
+        
+        if (response.ok) {
+            alert('Scraping wurde gestartet!');
+        } else {
+            alert('Fehler beim Starten des Scrapings');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ein Fehler ist aufgetreten');
+    }
+};
+
+// Toggle PornDB Settings basierend auf Checkbox
+document.getElementById('source-porndb').addEventListener('change', function(e) {
+    const settings = document.getElementById('porndb-settings');
+    settings.style.display = this.checked ? 'block' : 'none';
+});
+</script>
+{% endblock %} 

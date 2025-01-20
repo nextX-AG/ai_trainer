@@ -161,6 +161,7 @@ class Settings(BaseModel):
     log_level: str = "INFO"
     supabase_url: str = ""
     supabase_key: str = ""
+    porndb_api_key: str = "25a7db06eb6b42f752447eef22159c82"  # Default API Key
     
     @classmethod
     def load(cls):

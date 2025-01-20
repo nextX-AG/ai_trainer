@@ -12,7 +12,23 @@
 - Datenbank: Supabase (PostgreSQL)
 - Templates: Jinja2 für Admin-Interface
 
-## Projektstruktur 
+## Projektstruktur
+
+Die Anwendung ist in folgende Hauptbereiche unterteilt:
+- Overview (Dashboard)
+- Projekte (Projektverwaltung)
+- Scraping (Datensammlung)
+- Training (Modelltraining)
+- Datasets (Datenverwaltung)
+- Models (Modellverwaltung)
+- Face Swap Studio (Anwendung)
+- Einstellungen (Konfiguration)
+
+### Navigation
+Die Navigation ist hierarchisch aufgebaut:
+1. Hauptnavigation (immer sichtbar)
+2. Kontextabhängige Unternavigation
+3. Einstellungen über das Zahnrad-Icon erreichbar
 
 # Wichtige Entwicklungsinformationen
 

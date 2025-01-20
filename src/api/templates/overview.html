@@ -3,81 +3,52 @@
 {% block title %}AI Trainer - Overview{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Stats Overview -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="page-section">
-            <h3 class="text-lg font-medium text-gray-900">Projekte</h3>
-            <p class="mt-1">
-                <span class="text-3xl font-bold text-indigo-600">{{ stats.total_projects }}</span>
-                <span class="text-sm text-gray-500">Gesamt</span>
-            </p>
+<div class="page-section">
+    <h2 class="section-title">Overview</h2>
+    
+    <!-- Dashboard Statistiken -->
+    <div class="grid grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">Projekte</h3>
+            <p class="text-3xl font-bold">{{ stats.projects_count|default(0) }}</p>
         </div>
-        <div class="page-section">
-            <h3 class="text-lg font-medium text-gray-900">Scenes</h3>
-            <p class="mt-1">
-                <span class="text-3xl font-bold text-indigo-600">{{ stats.total_scenes }}</span>
-                <span class="text-sm text-gray-500">Gesamt</span>
-            </p>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">Models</h3>
+            <p class="text-3xl font-bold">{{ stats.models_count|default(0) }}</p>
         </div>
-        <div class="page-section">
-            <h3 class="text-lg font-medium text-gray-900">Downloads</h3>
-            <p class="mt-1">
-                <span class="text-3xl font-bold text-indigo-600">{{ stats.total_downloads }}</span>
-                <span class="text-sm text-gray-500">Gesamt</span>
-            </p>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-2">Datasets</h3>
+            <p class="text-3xl font-bold">{{ stats.datasets_count|default(0) }}</p>
         </div>
     </div>
 
-    <!-- Recent Projects -->
-    <div class="page-section">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="section-title">Neueste Projekte</h2>
-            <a href="/projects" class="text-sm text-indigo-600 hover:text-indigo-900">Alle anzeigen</a>
-        </div>
+    <!-- Letzte Aktivitäten -->
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4">Letzte Aktivitäten</h3>
         <div class="space-y-4">
-            {% if stats.recent_projects %}
-                {% for project in stats.recent_projects %}
-                    <div class="project-card">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="project-title">{{ project.name }}</h3>
-                                <p class="project-description">{{ project.description }}</p>
-                                <div class="project-meta">
-                                    Owner: {{ project.owner }}
-                                    <span class="mx-2">•</span>
-                                    Status: {{ project.status }}
-                                </div>
-                            </div>
-                            <a href="/projects/{{ project.id }}" class="text-indigo-600 hover:text-indigo-900">
-                                Details
-                            </a>
-                        </div>
+            {% if activities %}
+                {% for activity in activities %}
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-medium">{{ activity.description }}</p>
+                        <p class="text-sm text-gray-500">{{ activity.timestamp }}</p>
                     </div>
+                    <span class="badge badge-{{ activity.type }}">{{ activity.type }}</span>
+                </div>
                 {% endfor %}
             {% else %}
-                <p class="text-gray-500">Keine Projekte vorhanden</p>
+                <p class="text-gray-500">Keine Aktivitäten vorhanden</p>
             {% endif %}
         </div>
     </div>
-
-    <!-- Quick Actions -->
-    <div class="page-section">
-        <h2 class="section-title">Schnellzugriff</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <a href="/projects/new" class="btn-primary text-center">
-                Neues Projekt
-            </a>
-            <a href="/datasets/new" class="btn-primary text-center">
-                Dataset erstellen
-            </a>
-            <a href="/training/new" class="btn-primary text-center">
-                Training starten
-            </a>
-            <a href="/models/new" class="btn-primary text-center">
-                Model hochladen
-            </a>
-        </div>
-    </div>
 </div>
+
+<style>
+.badge {
+    @apply px-2 py-1 rounded-full text-sm font-medium;
+}
+.badge-project { @apply bg-blue-100 text-blue-800; }
+.badge-model { @apply bg-green-100 text-green-800; }
+.badge-dataset { @apply bg-purple-100 text-purple-800; }
+</style>
 {% endblock %} 

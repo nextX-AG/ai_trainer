@@ -13,9 +13,41 @@
     </div>
     {% endif %}
 
-    <!-- Projekte Liste -->
+    <!-- Projekte Header mit Button -->
     <div class="flex justify-between items-center mb-6">
         <h2 class="section-title">Projekte</h2>
+        <button onclick="showNewProjectForm()" class="btn-primary">
+            Neues Projekt
+        </button>
+    </div>
+
+    <!-- Neues Projekt Formular (versteckt) -->
+    <div id="new-project-form" class="hidden mb-6">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">Neues Projekt erstellen</h3>
+            <form onsubmit="createProject(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Name</label>
+                        <input type="text" id="project-name" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Beschreibung</label>
+                        <textarea id="project-description" rows="3"
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="hideNewProjectForm()" class="btn-secondary">
+                            Abbrechen
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            Erstellen
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Projekt Liste -->
@@ -43,5 +75,53 @@
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
+
+.btn-primary {
+    @apply px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50;
+}
+
+.btn-secondary {
+    @apply px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200;
+}
 </style>
+
+<script>
+function showNewProjectForm() {
+    document.getElementById('new-project-form').classList.remove('hidden');
+}
+
+function hideNewProjectForm() {
+    document.getElementById('new-project-form').classList.add('hidden');
+}
+
+async function createProject(event) {
+    event.preventDefault();
+    
+    const projectData = {
+        name: document.getElementById('project-name').value,
+        description: document.getElementById('project-description').value,
+        owner: 'dev',  // TODO: Dynamisch vom eingeloggten User
+        status: 'active'
+    };
+    
+    try {
+        const response = await fetch('/api/projects', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(projectData)
+        });
+        
+        if (response.ok) {
+            // Seite neu laden um das neue Projekt anzuzeigen
+            window.location.reload();
+        } else {
+            console.error('Fehler beim Erstellen des Projekts');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+</script>
 {% endblock %} 
