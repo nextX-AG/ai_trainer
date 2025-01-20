@@ -6,8 +6,49 @@
 {% endblock %}
 
 <div class="page-section">
-    <h2 class="section-title">Face Swap Studio</h2>
-    
+    <!-- Debug Info nur wenn explizit angefordert -->
+    {% if debug and show_debug_info %}
+    <div class="bg-yellow-100 p-4 mb-6">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="font-bold">Debug Information</h3>
+            <button onclick="this.parentElement.parentElement.style.display='none'" class="text-gray-500 hover:text-gray-700">×</button>
+        </div>
+        <pre class="text-xs overflow-auto">{{ models|tojson(indent=2) }}</pre>
+    </div>
+    {% endif %}
+
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="section-title">Face Swap Studio</h2>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6">
+        <!-- Quellbild -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">Quellbild</h3>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                <p class="text-gray-500">Bild hierher ziehen oder klicken zum Auswählen</p>
+            </div>
+        </div>
+
+        <!-- Zielbild -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4">Zielbild</h3>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                <p class="text-gray-500">Bild hierher ziehen oder klicken zum Auswählen</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Auswahl -->
+    <div class="mt-6 bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4">Model Auswahl</h3>
+        <select class="form-select block w-full">
+            {% for model in models %}
+            <option value="{{ model.id }}">{{ model.name }} (v{{ model.version }})</option>
+            {% endfor %}
+        </select>
+    </div>
+
     <div class="grid grid-cols-3 gap-6">
         <!-- Linke Spalte: Quellbild und Gesichtserkennung -->
         <div class="source-section">

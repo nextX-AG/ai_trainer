@@ -10,26 +10,19 @@ templates = Jinja2Templates(directory="src/api/templates")
 project_service = ProjectService()
 
 @router.get("/projects", response_class=HTMLResponse)
-async def projects_page(request: Request):
+async def projects_page(request: Request, show_modal: bool = False):
     """Rendert die Projekte-Übersichtsseite"""
-    logger.info("=== DEBUG: Projects View Start ===")
     try:
-        # Projekte abrufen
-        logger.info("1. Calling project_service.list_projects()")
         projects = project_service.list_projects()
-        logger.info(f"2. Got projects response: {projects}")
-        
-        # Daten extrahieren
         projects_data = projects.data if hasattr(projects, 'data') else projects
-        logger.info(f"3. Final projects_data for template: {projects_data}")
         
-        # Template rendern
         return templates.TemplateResponse(
             "projects.html",
             {
                 "request": request,
                 "projects": projects_data,
-                "debug": True  # Aktiviert Debug-Ausgabe im Template
+                "debug": True,  # Erstmal immer True für die Entwicklung
+                "show_debug_info": False,
             }
         )
     except Exception as e:

@@ -11,6 +11,8 @@ from src.api.views.training_view import router as training_view_router
 from src.api.views.datasets_view import router as datasets_view_router
 from src.api.views.models_view import router as models_view_router
 from src.api.views.settings_view import router as settings_view_router, Settings
+from src.api.views.index_view import router as index_view_router
+from src.api.views.faceswap_view import router as faceswap_view_router
 
 # Verzeichnisse erstellen
 Path("temp").mkdir(exist_ok=True)
@@ -40,18 +42,22 @@ app.include_router(projects.router, prefix="/api", tags=["api"])
 app.include_router(inference.router, prefix="/api", tags=["api"])
 app.include_router(models.router, prefix="/api", tags=["api"])
 
-# Frontend Routen (ohne prefix)
-app.include_router(projects_view_router)
-app.include_router(training_view_router)
-app.include_router(datasets_view_router)
-app.include_router(models_view_router)
-app.include_router(settings_view_router)
-
-# Statische Dateien
+# Statische Dateien zuerst
 app.mount("/static", StaticFiles(directory="src/api/static"), name="static")
 
 # Settings laden
 settings = Settings.load()
+
+# Frontend Routen (ohne prefix) - Reihenfolge ist wichtig!
+app.include_router(settings_view_router)  # Settings vor den anderen Views
+app.include_router(projects_view_router)
+app.include_router(training_view_router)
+app.include_router(datasets_view_router)
+app.include_router(models_view_router)
+app.include_router(faceswap_view_router)  # Neue Route
+
+# Root-Route ganz zum Schluss
+app.include_router(index_view_router)  # Index-Route als letztes
 
 # Logging konfigurieren
 logging.basicConfig(

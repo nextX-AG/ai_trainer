@@ -1,28 +1,31 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Debug Info -->
-{% if debug %}
-<div class="bg-yellow-100 p-4 mb-4">
-    <h3 class="font-bold">Debug Information:</h3>
-    <pre class="text-xs mt-2">
+<div class="page-section">
+    <!-- Debug Info nur wenn explizit angefordert -->
+    {% if debug and show_debug_info %}  {# show_debug_info als zusätzliche Bedingung #}
+    <div class="bg-yellow-100 p-4 mb-6">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="font-bold">Debug Information</h3>
+            <button onclick="this.parentElement.parentElement.style.display='none'" class="text-gray-500 hover:text-gray-700">×</button>
+        </div>
+        <pre class="text-xs overflow-auto">
 Models Type: {{ models.__class__.__name__ }}
 Models Data: {{ models|tojson(indent=2) }}
 Projects Data: {{ projects|tojson(indent=2) }}
-    </pre>
-</div>
-{% endif %}
+        </pre>
+    </div>
+    {% endif %}
 
-<div class="page-section">
+    <!-- Models Liste -->
     <div class="flex justify-between items-center mb-6">
         <h2 class="section-title">Models ({{ models|length }})</h2>
-        <button id="new-model-btn" class="btn-primary">Neues Model</button>
     </div>
 
     <!-- Model Liste -->
     <div id="models-list" class="grid gap-4">
         {% for model in models %}
-        <div class="model-card bg-white p-6 rounded-lg shadow">
+        <div class="model-card">
             <div class="flex justify-between items-start">
                 <div>
                     <h3 class="text-lg font-semibold">{{ model.name }}</h3>
@@ -30,126 +33,34 @@ Projects Data: {{ projects|tojson(indent=2) }}
                         <span class="badge badge-{{ model.type }}">{{ model.type }}</span>
                         <span class="badge badge-info">v{{ model.version }}</span>
                     </div>
-                    {% if model.metrics %}
-                    <div class="mt-4">
-                        <h4 class="font-medium">Metriken</h4>
-                        <div class="grid grid-cols-2 gap-2 mt-2">
-                            {% for key, value in model.metrics.items() %}
-                            <div class="text-sm">
-                                <span class="text-gray-600">{{ key }}:</span>
-                                <span>{{ value }}</span>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
-                <div class="flex space-x-2">
-                    <a href="/training/{{ model.id }}" class="btn-secondary">Training</a>
-                    <button class="btn-secondary edit-model" data-id="{{ model.id }}">Bearbeiten</button>
-                    <button class="btn-danger delete-model" data-id="{{ model.id }}">Löschen</button>
-                </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-500">
+                Erstellt am: {{ model.created_at.split('T')[0] }}
             </div>
         </div>
         {% endfor %}
     </div>
-
-    <!-- Neues Model Modal -->
-    <div id="model-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3 class="modal-title">Neues Model</h3>
-            <form id="model-form">
-                <div class="form-group">
-                    <label for="model-name">Name</label>
-                    <input type="text" id="model-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="model-type">Typ</label>
-                    <select id="model-type" required>
-                        <option value="simswap">SimSwap</option>
-                        <option value="custom">Custom</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="project-id">Projekt</label>
-                    <select id="project-id" required>
-                        {% for project in projects %}
-                        <option value="{{ project.id }}">{{ project.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="flex justify-end space-x-2">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">Abbrechen</button>
-                    <button type="submit" class="btn-primary">Speichern</button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <style>
-.badge-simswap { background: #e0f2fe; color: #0369a1; }
-.badge-custom { background: #f0fdf4; color: #166534; }
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('model-modal');
-    const newModelBtn = document.getElementById('new-model-btn');
-    
-    newModelBtn.addEventListener('click', () => {
-        modal.classList.remove('hidden');
-    });
-
-    // Model erstellen
-    const modelForm = document.getElementById('model-form');
-    modelForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const data = {
-            name: document.getElementById('model-name').value,
-            type: document.getElementById('model-type').value,
-            project_id: document.getElementById('project-id').value
-        };
-        
-        try {
-            const response = await fetch('/api/models/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            
-            if (response.ok) {
-                window.location.reload();
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    });
-
-    // Model löschen
-    document.querySelectorAll('.delete-model').forEach(button => {
-        button.addEventListener('click', async (e) => {
-            if (confirm('Model wirklich löschen?')) {
-                const id = e.target.dataset.id;
-                try {
-                    const response = await fetch(`/api/models/${id}`, {
-                        method: 'DELETE'
-                    });
-                    if (response.ok) {
-                        window.location.reload();
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                }
-            }
-        });
-    });
-});
-
-function closeModal() {
-    document.getElementById('model-modal').classList.add('hidden');
+.model-card {
+    background: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
-</script>
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+}
+
+.badge-simswap { background: #e0f2fe; color: #0369a1; }
+.badge-info { background: #f0fdf4; color: #166534; }
+</style>
 {% endblock %} 
