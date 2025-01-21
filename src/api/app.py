@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-from src.api.routes import projects, inference, models
+from src.api.routes import projects, inference, models, scraping
 from src.api.views.projects_view import router as projects_view_router
 from src.api.views.training_view import router as training_view_router
 from src.api.views.datasets_view import router as datasets_view_router
@@ -42,6 +42,7 @@ app.add_middleware(
 app.include_router(projects.router, prefix="/api", tags=["api"])
 app.include_router(inference.router, prefix="/api", tags=["api"])
 app.include_router(models.router, prefix="/api", tags=["api"])
+app.include_router(scraping.router, prefix="/api", tags=["api"])
 
 # Statische Dateien zuerst
 app.mount("/static", StaticFiles(directory="src/api/static"), name="static")

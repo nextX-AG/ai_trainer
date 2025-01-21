@@ -7,6 +7,29 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import BaseModel
 import logging
 
+# Definiere CONFIG_FILE zuerst
+CONFIG_FILE = Path("config/settings.json")
+CONFIG_FILE.parent.mkdir(exist_ok=True)
+
+class Settings(BaseModel):
+    debug_mode: bool = False
+    log_level: str = "INFO"
+    supabase_url: str = ""
+    supabase_key: str = ""
+    porndb_api_key: str = "25a7db06eb6b42f752447eef22159c82"  # Default API Key
+    
+    @classmethod
+    def load(cls):
+        if CONFIG_FILE.exists():
+            return cls.parse_file(CONFIG_FILE)
+        return cls()
+    
+    def save(self):
+        CONFIG_FILE.write_text(self.json(indent=2))
+
+# Globale Settings-Instanz erst nach der Klassendefinition
+settings = Settings.load()
+
 @dataclass
 class ProjectConfig:
     id: str  # Eindeutige Projekt-ID
@@ -154,26 +177,4 @@ class ProjectConfig:
     def initialize_project(self):
         """Initialisiert die Projektstruktur"""
         structure = ProjectStructure(self.data_structure.project_root)
-        structure.create_structure()
-
-class Settings(BaseModel):
-    debug_mode: bool = False
-    log_level: str = "INFO"
-    supabase_url: str = ""
-    supabase_key: str = ""
-    porndb_api_key: str = "25a7db06eb6b42f752447eef22159c82"  # Default API Key
-    
-    @classmethod
-    def load(cls):
-        if CONFIG_FILE.exists():
-            return cls.parse_file(CONFIG_FILE)
-        return cls()
-    
-    def save(self):
-        CONFIG_FILE.write_text(self.json(indent=2))
-
-# Globale Settings-Instanz
-settings = Settings.load()
-
-CONFIG_FILE = Path("config/settings.json")
-CONFIG_FILE.parent.mkdir(exist_ok=True) 
+        structure.create_structure() 
